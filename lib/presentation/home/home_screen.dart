@@ -145,89 +145,112 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    colorScheme.surfaceContainerLowest,
-                    colorScheme.surfaceContainer,
-                    colorScheme.surfaceContainerHigh,
-                  ]
-                : [
-                    colorScheme.surfaceContainerHighest,
-                    colorScheme.surface,
-                    colorScheme.surfaceContainerHighest,
-                  ],
-          ),
-        ),
-        child: Center(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                width: 420,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface.withOpacity(isDark ? 0.3 : 0.6),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 20),
-                    Text(
-                      'DNS Changer',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                        letterSpacing: -0.5,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDark
+                    ? [
+                        colorScheme.surfaceContainerLowest,
+                        colorScheme.surfaceContainer,
+                        colorScheme.surfaceContainerHigh,
+                      ]
+                    : [
+                        colorScheme.surfaceContainerHighest,
+                        colorScheme.surface,
+                        colorScheme.surfaceContainerHighest,
+                      ],
+              ),
+            ),
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    width: 420,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface.withOpacity(
+                        isDark ? 0.3 : 0.6,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withOpacity(0.2),
+                        width: 1,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () {
-                        _checkStatus();
-                      },
-                      child: Text(
-                        _activeInterface,
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 13,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 20),
+                        Text(
+                          'DNS Changer',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () {
+                            _checkStatus();
+                          },
+                          child: Text(
+                            _activeInterface,
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _StatusIndicator(
+                          isConnected: _isConnected,
+                          message: _statusMessage,
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(height: 40),
+                        ConnectButton(
+                          isConnected: _isConnected,
+                          isLoading: _isLoading,
+                          onTap: _toggleDNS,
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(height: 40),
+                        ProfileSelector(isConnected: _isConnected),
+                        const SizedBox(height: 20),
+                      ],
                     ),
-                    const SizedBox(height: 20),
-                    _StatusIndicator(
-                      isConnected: _isConnected,
-                      message: _statusMessage,
-                      colorScheme: colorScheme,
-                    ),
-                    const SizedBox(height: 40),
-                    ConnectButton(
-                      isConnected: _isConnected,
-                      isLoading: _isLoading,
-                      onTap: _toggleDNS,
-                      colorScheme: colorScheme,
-                    ),
-                    const SizedBox(height: 40),
-                    ProfileSelector(isConnected: _isConnected),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          Positioned(
+            bottom: 10,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Made with ❤️ for the Open Source Community | github.com/samg-hub",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurface.withAlpha(70),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
