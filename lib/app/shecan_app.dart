@@ -15,7 +15,7 @@ class ShecanApp extends StatelessWidget {
       create: (_) => DNSProvider(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Shecan DNS',
+        title: 'DNS Changer',
         theme: materialTheme.light(),
         darkTheme: materialTheme.dark(),
         themeMode: ThemeMode.system, // Set to light as per user request

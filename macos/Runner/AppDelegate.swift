@@ -52,13 +52,13 @@ class AppDelegate: FlutterAppDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             if #available(macOS 11.0, *) {
-                button.image = NSImage(systemSymbolName: "network.badge.shield.half.filled", accessibilityDescription: "Shecan DNS")
+                button.image = NSImage(systemSymbolName: "network.badge.shield.half.filled", accessibilityDescription: "DNS Changer")
             } else {
                 button.title = "DNS"
             }
         }
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Connect Shecan", action: #selector(connectFromMenu), keyEquivalent: "c"))
+        menu.addItem(NSMenuItem(title: "Connect DNS", action: #selector(connectFromMenu), keyEquivalent: "c"))
         menu.addItem(NSMenuItem(title: "Disconnect", action: #selector(disconnectFromMenu), keyEquivalent: "d"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))

@@ -178,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const SizedBox(height: 20),
                     Text(
-                      'DNS Controller',
+                      'DNS Changer',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
