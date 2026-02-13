@@ -1,6 +1,6 @@
-# DNS Changer (Shecan)
+# DNS Changer 
 
-A modern, lightweight macOS application built with Flutter to quickly switch between different DNS profiles. Designed specifically for users in Iran to easily toggle DNS settings like Shecan, Cloudflare, and custom configurations.
+A modern, lightweight macOS application built with Flutter to quickly switch between different DNS profiles. Designed specifically for users in Iran to easily toggle DNS settings like Cloudflare, and custom configurations.
 
 ## ✨ Features
 
