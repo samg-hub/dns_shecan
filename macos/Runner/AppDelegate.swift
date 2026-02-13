@@ -16,7 +16,7 @@ class AppDelegate: FlutterAppDelegate {
     private var channel: FlutterMethodChannel?
     
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return true
+        return false
     }
     
     override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
@@ -59,6 +59,8 @@ class AppDelegate: FlutterAppDelegate {
             }
         }
         let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Show DNS Changer", action: #selector(showWindow), keyEquivalent: "s"))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Connect DNS", action: #selector(connectFromMenu), keyEquivalent: "c"))
         menu.addItem(NSMenuItem(title: "Disconnect", action: #selector(disconnectFromMenu), keyEquivalent: "d"))
         menu.addItem(NSMenuItem.separator())
@@ -76,6 +78,11 @@ class AppDelegate: FlutterAppDelegate {
         disconnect { [weak self] _ in
             self?.notifyStatusChanged()
         }
+    }
+
+    @objc func showWindow() {
+        mainFlutterWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func notifyStatusChanged() {
