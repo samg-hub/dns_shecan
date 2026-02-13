@@ -69,7 +69,7 @@ class _DNSHomePageState extends State<DNSHomePage>
     }
   }
 
-  Future<void> _toggleDNS() async {
+  Future<void> _toggleDNS({bool force = false}) async {
     setState(() {
       _isLoading = true;
     });
@@ -82,31 +82,83 @@ class _DNSHomePageState extends State<DNSHomePage>
           _statusMessage = 'Disconnected';
         });
       } else {
-        await platform.invokeMethod('connect');
+        await platform.invokeMethod('connect', {'force': force});
         setState(() {
           _isConnected = true;
           _statusMessage = 'Protection Active';
         });
       }
     } on PlatformException catch (e) {
-      setState(() {
-        _statusMessage = 'Failed: ${e.message}';
-      });
-      // Show error dialog
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Error'),
-            content: Text(e.message ?? 'Unknown error occurred'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
+      if (e.code == 'VPN_ACTIVE') {
+        if (mounted) {
+          // Show VPN Warning Dialog
+          final shouldProceed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1E2E), // Match app theme
+              title: const Text(
+                'VPN is Active',
+                style: TextStyle(color: Colors.white),
               ),
-            ],
-          ),
-        );
+              content: const Text(
+                'A VPN connection is active. DNS changes may not apply while the VPN is connected.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text(
+                    'Proceed',
+                    style: TextStyle(color: Color(0xFF00FF94)),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldProceed == true) {
+            // Retry with force
+            await _toggleDNS(force: true);
+          } else {
+            setState(() {
+              _statusMessage = 'Cancelled';
+            });
+          }
+        }
+      } else {
+        setState(() {
+          _statusMessage = 'Failed: ${e.message}';
+        });
+        // Show generic error dialog
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1E2E),
+              title: const Text('Error', style: TextStyle(color: Colors.white)),
+              content: Text(
+                e.message ?? 'Unknown error occurred',
+                style: const TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } finally {
       setState(() {

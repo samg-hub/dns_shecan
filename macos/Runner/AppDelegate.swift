@@ -32,7 +32,7 @@ class AppDelegate: FlutterAppDelegate {
             (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             switch call.method {
             case "connect":
-                self.connect(result: result)
+                self.connect(call: call, result: result)
             case "disconnect":
                 self.disconnect(result: result)
             case "getStatus":
@@ -65,15 +65,37 @@ class AppDelegate: FlutterAppDelegate {
         statusItem.menu = menu
     }
     
-    @objc func connectFromMenu() { connect { _ in } }
+    @objc func connectFromMenu() { 
+        // Menu toggle forces connection if UI isn't there to prompt, or we can just fail silently/log.
+        // For better UX, we assume menu item implies user intent, so maybe force? 
+        // Let's pass nil call for now, handle internally.
+        // Actually, let's just create a dummy call or refactor connect.
+        // Refactor: connect takes optional force boolean.
+        internalConnect(force: true) { _ in }
+    }
+    
     @objc func disconnectFromMenu() { disconnect { _ in } }
     
-    // MARK: - Core Logic (Refactored for Sudo)
+    // MARK: - Core Logic
     
-    private func connect(result: @escaping FlutterResult) {
-        let service = getActiveService()
+    private func connect(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        let args = call.arguments as? [String: Any]
+        let force = args?["force"] as? Bool ?? false
+        
+        internalConnect(force: force, result: result)
+    }
+    
+    private func internalConnect(force: Bool, result: @escaping FlutterResult) {
+        let (service, isVpn) = getBestService()
+        
         if service.isEmpty {
             result(FlutterError(code: "NO_NET", message: "No active network service found", details: nil))
+            return
+        }
+        
+        // VPN Detection
+        if isVpn && !force {
+            result(FlutterError(code: "VPN_ACTIVE", message: "VPN Detected", details: service))
             return
         }
         
@@ -107,7 +129,11 @@ class AppDelegate: FlutterAppDelegate {
         if saved.isEmpty || (saved.count == 1 && saved[0].contains("There aren't any")) {
             serverArg = "Empty"
         } else {
-            serverArg = saved.joined(separator: " ")
+            if saved.first == "Empty" { // Handle explicit "Empty" string if saved
+                serverArg = "Empty"
+            } else {
+                serverArg = saved.joined(separator: " ")
+            }
         }
         
         let cmd = "networksetup -setdnsservers \"\(service)\" \(serverArg)"
@@ -137,57 +163,39 @@ class AppDelegate: FlutterAppDelegate {
         result(service.isEmpty ? "Unknown Connection" : service)
     }
     
-    // MARK: - Network Helpers (Read-Only, No Sudo needed)
-    
-    private func getActiveService() -> String {
-        let task = Process()
-        task.launchPath = "/sbin/route"
-        task.arguments = ["-n", "get", "default"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.launch()
-        task.waitUntilExit()
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else { return "" }
-        
-        var interface = ""
-        output.enumerateLines { line, stop in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("interface: ") {
-                interface = trimmed.replacingOccurrences(of: "interface: ", with: "")
-                stop = true
-            }
-        }
-        if interface.isEmpty { return "" }
-        return getServiceName(from: interface)
-    }
-    
-    private func getServiceName(from interface: String) -> String {
-        let task = Process()
-        task.launchPath = "/usr/sbin/networksetup"
-        task.arguments = ["-listallhardwareports"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.launch()
-        task.waitUntilExit()
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else { return "" }
-        
-        let lines = output.components(separatedBy: .newlines)
-        for i in 0..<lines.count {
-            if lines[i].contains("Device: \(interface)") {
-                if i > 0 {
-                    let prev = lines[i-1]
-                    if prev.contains("Hardware Port: ") {
-                        return prev.replacingOccurrences(of: "Hardware Port: ", with: "")
-                    }
+    // New Helper
+    private func getBestService() -> (String, Bool) {
+        // 1. Try standard route
+        if let interface = NetworkManager.shared.getPrimaryInterface() {
+            // Check if VPN
+            if NetworkManager.shared.isVPN(interface: interface) {
+                // It is VPN. Find physical fallback.
+                if let physical = NetworkManager.shared.findActivePhysicalService() {
+                    return (physical, true) // Service is physical, but we are in VPN mode
+                }
+            } else {
+                // Not VPN, get service name
+                if let service = NetworkManager.shared.getServiceName(from: interface) {
+                    return (service, false)
                 }
             }
         }
-        return ""
+        
+        // 2. If route failed or no service found for interface, try finding any active physical
+        if let physical = NetworkManager.shared.findActivePhysicalService() {
+             return (physical, false) // Fallback, unsure if VPN
+        }
+        
+        return ("", false)
     }
+
+    private func getActiveService() -> String {
+        let (service, _) = getBestService()
+        return service
+    }
+
+    
+
     
     private func getDNS(service: String) -> [String] {
         let task = Process()
