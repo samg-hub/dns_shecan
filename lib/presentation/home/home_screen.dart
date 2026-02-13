@@ -24,6 +24,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Listen for status changes from native side (menu bar)
+    DNSService.platform.setMethodCallHandler((call) async {
+      if (call.method == 'onStatusChanged') {
+        _checkStatus();
+      }
+    });
+
     Future.delayed(const Duration(milliseconds: 250), () {
       _checkStatus();
     });

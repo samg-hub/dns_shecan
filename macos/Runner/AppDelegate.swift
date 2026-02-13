@@ -13,6 +13,7 @@ class AppDelegate: FlutterAppDelegate {
     private let TARGET_DNS = ["178.22.122.101", "185.51.200.1"]
     
     private var statusItem: NSStatusItem!
+    private var channel: FlutterMethodChannel?
     
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
@@ -24,11 +25,11 @@ class AppDelegate: FlutterAppDelegate {
     
     override func applicationDidFinishLaunching(_ notification: Notification) {
         let controller: FlutterViewController = mainFlutterWindow?.contentViewController as! FlutterViewController
-        let channel = FlutterMethodChannel(name: channelName, binaryMessenger: controller.engine.binaryMessenger)
+        channel = FlutterMethodChannel(name: channelName, binaryMessenger: controller.engine.binaryMessenger)
         
         setupStatusItem()
         
-        channel.setMethodCallHandler({
+        channel?.setMethodCallHandler({
             (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             switch call.method {
             case "connect":
@@ -66,10 +67,20 @@ class AppDelegate: FlutterAppDelegate {
     }
     
     @objc func connectFromMenu() { 
-        internalConnect(servers: ["178.22.122.101", "185.51.200.1"], force: true) { _ in }
+        internalConnect(servers: ["178.22.122.101", "185.51.200.1"], force: true) { [weak self] _ in
+            self?.notifyStatusChanged()
+        }
     }
     
-    @objc func disconnectFromMenu() { disconnect { _ in } }
+    @objc func disconnectFromMenu() { 
+        disconnect { [weak self] _ in
+            self?.notifyStatusChanged()
+        }
+    }
+
+    private func notifyStatusChanged() {
+        channel?.invokeMethod("onStatusChanged", arguments: nil)
+    }
     
     // MARK: - Core Logic
     
