@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'theme.dart';
 
 void main() {
   runApp(const DNSApp());
@@ -11,19 +12,15 @@ class DNSApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize Theme
+    const materialTheme = MaterialTheme(TextTheme());
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Shecan DNS',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF1E1E2E), // Dark background
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF00C8FF), // Cyan accent
-          secondary: Color(0xFF8888AA),
-        ),
-        fontFamily: 'SF Pro Display', // System font usually available on Mac
-        useMaterial3: true,
-      ),
+      theme: materialTheme.light(),
+      darkTheme: materialTheme.dark(),
+      themeMode: ThemeMode.light, // Follow system appearance
       home: const DNSHomePage(),
     );
   }
@@ -43,7 +40,7 @@ class _DNSHomePageState extends State<DNSHomePage>
   bool _isConnected = false;
   bool _isLoading = false;
   String _statusMessage = 'Disconnected';
-  String _activeInterface = 'Detecting...'; // Placeholder
+  String _activeInterface = 'Detecting...';
 
   @override
   void initState() {
@@ -91,40 +88,27 @@ class _DNSHomePageState extends State<DNSHomePage>
     } on PlatformException catch (e) {
       if (e.code == 'VPN_ACTIVE') {
         if (mounted) {
-          // Show VPN Warning Dialog
           final shouldProceed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
-              backgroundColor: const Color(0xFF1E1E2E), // Match app theme
-              title: const Text(
-                'VPN is Active',
-                style: TextStyle(color: Colors.white),
-              ),
+              title: const Text('VPN is Active'),
               content: const Text(
                 'A VPN connection is active. DNS changes may not apply while the VPN is connected.',
-                style: TextStyle(color: Colors.white70),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.white54),
-                  ),
+                  child: const Text('Cancel'),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text(
-                    'Proceed',
-                    style: TextStyle(color: Color(0xFF00FF94)),
-                  ),
+                  child: const Text('Proceed'),
                 ),
               ],
             ),
           );
 
           if (shouldProceed == true) {
-            // Retry with force
             await _toggleDNS(force: true);
           } else {
             setState(() {
@@ -136,24 +120,16 @@ class _DNSHomePageState extends State<DNSHomePage>
         setState(() {
           _statusMessage = 'Failed: ${e.message}';
         });
-        // Show generic error dialog
         if (mounted) {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              backgroundColor: const Color(0xFF1E1E2E),
-              title: const Text('Error', style: TextStyle(color: Colors.white)),
-              content: Text(
-                e.message ?? 'Unknown error occurred',
-                style: const TextStyle(color: Colors.white70),
-              ),
+              title: const Text('Error'),
+              content: Text(e.message ?? 'Unknown error occurred'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  child: const Text('OK'),
                 ),
               ],
             ),
@@ -161,162 +137,222 @@ class _DNSHomePageState extends State<DNSHomePage>
         }
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background Gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0F2027),
-                  Color(0xFF203A43),
-                  Color(0xFF2C5364),
-                ],
-              ),
-            ),
+      backgroundColor: Colors.transparent, // Background handled by Container
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+                    colorScheme.surfaceContainerLowest,
+                    colorScheme.surfaceContainer,
+                    colorScheme.surfaceContainerHigh,
+                  ]
+                : [Colors.white, Colors.white, Colors.white],
           ),
+        ),
+        child: Stack(
+          children: [
+            // Standard MacOS Traffic Lights Area Placeholder
+            // We left them enabled in Swift, so we just avoid drawing over them at top-left
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  24,
+                ), // Modern rounded corners
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    width: 380,
+                    height: 550,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface.withOpacity(
+                        isDark ? 0.3 : 0.6,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withOpacity(0.2),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Spacer for traffic lights if the card was full screen,
+                        // but here it is a centered card, so no need for top padding relative to screen.
+                        Text(
+                          'Shecan DNS',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _activeInterface,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
 
-          // Glassmorphism Content
-          Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  width: 350,
-                  height: 500,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Mac DNS Controller',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _activeInterface, // Now used
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        _statusMessage,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: _isConnected
-                              ? Colors.greenAccent
-                              : Colors.white70,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 60),
-
-                      // Toggle Button
-                      GestureDetector(
-                        onTap: _isLoading ? null : _toggleDNS,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeInOut,
-                          width: 140,
-                          height: 140,
+                        // Status Indicator
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
                             color: _isConnected
-                                ? const Color(0xFF00FF94).withOpacity(0.2)
-                                : Colors.redAccent.withOpacity(0.1),
-                            border: Border.all(
+                                ? colorScheme.primaryContainer
+                                : colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _statusMessage,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                               color: _isConnected
-                                  ? const Color(0xFF00FF94)
-                                  : Colors.white.withOpacity(0.3),
-                              width: 2,
+                                  ? colorScheme.onPrimaryContainer
+                                  : colorScheme.onSurfaceVariant,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _isConnected
-                                    ? const Color(0xFF00FF94).withOpacity(0.4)
-                                    : Colors.transparent,
-                                blurRadius: 30,
-                                spreadRadius: 5,
+                          ),
+                        ),
+
+                        const SizedBox(height: 50),
+
+                        // Toggle Button
+                        GestureDetector(
+                          onTap: _isLoading ? null : () => _toggleDNS(),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeOutBack,
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: _isConnected
+                                    ? [
+                                        const Color(0xFF00C853), // Green 700
+                                        const Color.fromARGB(
+                                          255,
+                                          7,
+                                          168,
+                                          90,
+                                        ), // Green Accent 200
+                                      ]
+                                    : [
+                                        colorScheme.surfaceContainerHighest,
+                                        colorScheme.surfaceContainer,
+                                      ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _isConnected
+                                      ? const Color(0xFF00C853).withOpacity(0.4)
+                                      : Colors.transparent,
+                                  blurRadius: 40,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: _isLoading
+                                  ? CircularProgressIndicator(
+                                      color: _isConnected
+                                          ? Colors.white
+                                          : colorScheme.onSurface,
+                                    )
+                                  : Icon(
+                                      Icons.power_settings_new_rounded,
+                                      size: 80,
+                                      color: _isConnected
+                                          ? Colors.white
+                                          : colorScheme.outline,
+                                    ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 50),
+
+                        // DNS Info Card
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 40),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerLow.withOpacity(
+                              0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: colorScheme.outlineVariant.withOpacity(
+                                0.3,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'DNS SERVERS',
+                                style: TextStyle(
+                                  color: colorScheme.secondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _DnsRow(
+                                ip: '178.22.122.101',
+                                colorScheme: colorScheme,
+                              ),
+                              const SizedBox(height: 8),
+                              _DnsRow(
+                                ip: '185.51.200.1',
+                                colorScheme: colorScheme,
                               ),
                             ],
                           ),
-                          child: Center(
-                            child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white,
-                                  )
-                                : Icon(
-                                    _isConnected
-                                        ? Icons.power_settings_new
-                                        : Icons.power_off,
-                                    size: 60,
-                                    color: _isConnected
-                                        ? const Color(0xFF00FF94)
-                                        : Colors.white70,
-                                  ),
-                          ),
                         ),
-                      ),
-
-                      const SizedBox(height: 60),
-
-                      // DNS Info
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 15,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black26,
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'TARGET DNS SERVERS',
-                              style: TextStyle(
-                                color: Colors.white54,
-                                fontSize: 12,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _DnsRow(ip: '178.22.122.101'),
-                            const SizedBox(height: 4),
-                            _DnsRow(ip: '185.51.200.1'),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -324,21 +360,24 @@ class _DNSHomePageState extends State<DNSHomePage>
 
 class _DnsRow extends StatelessWidget {
   final String ip;
-  const _DnsRow({required this.ip});
+  final ColorScheme colorScheme;
+
+  const _DnsRow({required this.ip, required this.colorScheme});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.dns, size: 14, color: Colors.cyanAccent),
-        const SizedBox(width: 8),
+        Icon(Icons.dns_rounded, size: 16, color: colorScheme.primary),
+        const SizedBox(width: 10),
         Text(
           ip,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
             fontFamily: 'Monospace',
+            fontSize: 15,
           ),
         ),
       ],
