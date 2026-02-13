@@ -36,7 +36,7 @@ class AppDelegate: FlutterAppDelegate {
             case "disconnect":
                 self.disconnect(result: result)
             case "getStatus":
-                self.getStatus(result: result)
+                self.getStatus(call: call, result: result)
             case "getActiveInterface":
                 self.getActiveInterfaceHandler(result: result)
             default:
@@ -66,12 +66,7 @@ class AppDelegate: FlutterAppDelegate {
     }
     
     @objc func connectFromMenu() { 
-        // Menu toggle forces connection if UI isn't there to prompt, or we can just fail silently/log.
-        // For better UX, we assume menu item implies user intent, so maybe force? 
-        // Let's pass nil call for now, handle internally.
-        // Actually, let's just create a dummy call or refactor connect.
-        // Refactor: connect takes optional force boolean.
-        internalConnect(force: true) { _ in }
+        internalConnect(servers: ["178.22.122.101", "185.51.200.1"], force: true) { _ in }
     }
     
     @objc func disconnectFromMenu() { disconnect { _ in } }
@@ -80,12 +75,18 @@ class AppDelegate: FlutterAppDelegate {
     
     private func connect(call: FlutterMethodCall, result: @escaping FlutterResult) {
         let args = call.arguments as? [String: Any]
+        let servers = args?["servers"] as? [String] ?? []
         let force = args?["force"] as? Bool ?? false
         
-        internalConnect(force: force, result: result)
+        if servers.isEmpty {
+            result(FlutterError(code: "INVALID_ARGS", message: "DNS servers list cannot be empty", details: nil))
+            return
+        }
+        
+        internalConnect(servers: servers, force: force, result: result)
     }
     
-    private func internalConnect(force: Bool, result: @escaping FlutterResult) {
+    private func internalConnect(servers: [String], force: Bool, result: @escaping FlutterResult) {
         let (service, isVpn) = getBestService()
         
         if service.isEmpty {
@@ -100,12 +101,14 @@ class AppDelegate: FlutterAppDelegate {
         }
         
         let current = getDNS(service: service)
-        if current != TARGET_DNS {
+        // Only save if current isn't already what we're setting (or if it's different from our app targets)
+        // To be safe, we save if the current doesn't match the new target
+        if current != servers {
             UserDefaults.standard.set(current, forKey: PREVIOUS_DNS_KEY)
         }
         
         // Use Sudo Helper
-        let serverArg = TARGET_DNS.joined(separator: " ")
+        let serverArg = servers.joined(separator: " ")
         let cmd = "networksetup -setdnsservers \"\(service)\" \(serverArg)"
         
         SudoHelper.shared.run(command: cmd) { success, errorMsg in
@@ -147,14 +150,18 @@ class AppDelegate: FlutterAppDelegate {
         }
     }
     
-    private func getStatus(result: @escaping FlutterResult) {
+    private func getStatus(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        let args = call.arguments as? [String: Any]
+        let servers = args?["servers"] as? [String] ?? []
+        
         let service = getActiveService()
-        if service.isEmpty {
+        if service.isEmpty || servers.isEmpty {
             result(false)
             return
         }
         let current = getDNS(service: service)
-        let isConnected = TARGET_DNS.allSatisfy { current.contains($0) }
+        // Check if all target servers are present in the current DNS settings
+        let isConnected = servers.allSatisfy { current.contains($0) }
         result(isConnected)
     }
     

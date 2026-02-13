@@ -3,9 +3,12 @@ import 'package:flutter/services.dart';
 class DNSService {
   static const platform = MethodChannel('com.shecan.dns/control');
 
-  Future<bool> getStatus() async {
+  Future<bool> getStatus(List<String> servers) async {
     try {
-      return await platform.invokeMethod('getStatus');
+      final bool result = await platform.invokeMethod('getStatus', {
+        'servers': servers,
+      });
+      return result;
     } on PlatformException {
       return false;
     }
@@ -19,8 +22,11 @@ class DNSService {
     }
   }
 
-  Future<void> connect({bool force = false}) async {
-    await platform.invokeMethod('connect', {'force': force});
+  Future<void> connect(List<String> servers, {bool force = false}) async {
+    await platform.invokeMethod('connect', {
+      'servers': servers,
+      'force': force,
+    });
   }
 
   Future<void> disconnect() async {

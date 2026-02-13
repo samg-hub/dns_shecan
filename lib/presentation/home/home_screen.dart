@@ -1,9 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../core/services/dns_service.dart';
+import '../../core/providers/dns_provider.dart';
 import '../widgets/connect_button.dart';
-import '../widgets/dns_server_row.dart';
+import '../widgets/profile_selector.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,12 +24,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkStatus();
+    Future.delayed(const Duration(milliseconds: 250), () {
+      _checkStatus();
+    });
   }
 
   Future<void> _checkStatus() async {
-    final isConnected = await _dnsService.getStatus();
+    final provider = context.read<DNSProvider>();
+    if (!provider.isInitialized) return;
+
+    final selectedServers = provider.selectedProfile?.servers ?? [];
+    if (selectedServers.isEmpty) return;
+
+    final isConnected = await _dnsService.getStatus(selectedServers);
     final interface = await _dnsService.getActiveInterface();
+
     if (mounted) {
       setState(() {
         _isConnected = isConnected;
@@ -38,6 +49,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _toggleDNS({bool force = false}) async {
+    final provider = context.read<DNSProvider>();
+    final servers = provider.selectedProfile?.servers ?? [];
+
+    if (servers.isEmpty) {
+      _showError('Selected profile has no DNS servers');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -48,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _statusMessage = 'Disconnected';
         });
       } else {
-        await _dnsService.connect(force: force);
+        await _dnsService.connect(servers, force: force);
         setState(() {
           _isConnected = true;
           _statusMessage = 'Protection Active';
@@ -114,6 +133,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Watch for provider changes
+    context.watch<DNSProvider>();
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
@@ -140,8 +162,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Container(
-                width: 380,
-                height: 550,
+                width: 420,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
                   color: colorScheme.surface.withOpacity(isDark ? 0.3 : 0.6),
                   borderRadius: BorderRadius.circular(24),
@@ -151,10 +173,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    const SizedBox(height: 20),
                     Text(
-                      'Shecan DNS',
+                      'DNS Controller',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -163,11 +187,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      _activeInterface,
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 13,
+                    GestureDetector(
+                      onTap: () {
+                        _checkStatus();
+                      },
+                      child: Text(
+                        _activeInterface,
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -176,15 +205,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       message: _statusMessage,
                       colorScheme: colorScheme,
                     ),
-                    const SizedBox(height: 50),
+                    const SizedBox(height: 40),
                     ConnectButton(
                       isConnected: _isConnected,
                       isLoading: _isLoading,
                       onTap: _toggleDNS,
                       colorScheme: colorScheme,
                     ),
-                    const SizedBox(height: 50),
-                    _DnsInfoCard(colorScheme: colorScheme),
+                    const SizedBox(height: 40),
+                    ProfileSelector(isConnected: _isConnected),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -213,9 +243,13 @@ class _StatusIndicator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: isConnected
-            ? colorScheme.primaryContainer
+            ? const Color(0xFF00C853).withOpacity(0.2)
             : colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isConnected ? const Color(0xFF00C853) : Colors.transparent,
+          width: 1,
+        ),
       ),
       child: Text(
         message,
@@ -223,45 +257,9 @@ class _StatusIndicator extends StatelessWidget {
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: isConnected
-              ? colorScheme.onPrimaryContainer
+              ? const Color(0xFF00C853)
               : colorScheme.onSurfaceVariant,
         ),
-      ),
-    );
-  }
-}
-
-class _DnsInfoCard extends StatelessWidget {
-  final ColorScheme colorScheme;
-
-  const _DnsInfoCard({required this.colorScheme});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 40),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'DNS SERVERS',
-            style: TextStyle(
-              color: colorScheme.secondary,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          DnsServerRow(ip: '178.22.122.101', colorScheme: colorScheme),
-          const SizedBox(height: 8),
-          DnsServerRow(ip: '185.51.200.1', colorScheme: colorScheme),
-        ],
       ),
     );
   }
