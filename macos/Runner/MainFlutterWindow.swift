@@ -4,6 +4,7 @@ import FlutterMacOS
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
+    flutterViewController.backgroundColor = .clear
     var windowFrame = self.frame
     windowFrame.size = NSSize(width: 500, height: 780)
     self.contentViewController = flutterViewController
@@ -16,6 +17,9 @@ class MainFlutterWindow: NSWindow {
     self.styleMask.insert(.fullSizeContentView)
     self.isMovableByWindowBackground = true
     self.title = ""
+    
+    // Fix black splash screen: use system-aware window background color
+    self.backgroundColor = .windowBackgroundColor
     
     // Optional: Hide standard buttons if requested, but maintaining them is usually better for UX
     // self.standardWindowButton(.closeButton)?.isHidden = true
