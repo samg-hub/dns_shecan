@@ -244,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   "Made with ❤️ for the Open Source Community | github.com/samg-hub",
                   style: TextStyle(
                     fontSize: 12,
-                    color: colorScheme.onSurface.withAlpha(70),
+                    color: const Color.fromARGB(255, 179, 179, 179),
                   ),
                 ),
               ],
