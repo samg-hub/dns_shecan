@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/dns_profile.dart';
@@ -27,12 +26,12 @@ class DNSProvider extends ChangeNotifier {
   }
 
   final List<DNSProfile> _predefinedProfiles = [
-    DNSProfile(
-      id: 'shecan',
-      name: 'Shecan',
-      servers: ['178.22.122.101', '185.51.200.1'],
-      isPredefined: true,
-    ),
+    // DNSProfile(
+    //   id: 'shecan',
+    //   name: 'Shecan',
+    //   servers: ['178.22.122.101', '185.51.200.1'],
+    //   isPredefined: true,
+    // ),
     DNSProfile(
       id: 'google',
       name: 'Google DNS',
